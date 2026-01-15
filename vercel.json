@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/exam/:path*",
-      "destination": "/api/exam/:path*"
+      "source": "/exam/:slug*",
+      "destination": "/api/exam/:slug*"
     },
     {
       "source": "/",
