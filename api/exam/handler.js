@@ -14,16 +14,11 @@ const handler = async (req, res) => {
     return;
   }
 
-  // 🔥 关键修复: 使用 req.query.path 而不是 req.url
-  const pathSegments = req.query.path || [];
-  const targetPath = '/exam/' + pathSegments.join('/');
+  // 🔥 关键: 从 req.url 提取路径 (因为用了 routes 而不是 rewrites)
+  // req.url 会是 /api/exam/login/api/stu/signin
+  const targetPath = req.url.replace(/^\/api/, '');
   
-  // 处理查询参数
-  const queryParams = { ...req.query };
-  delete queryParams.path; // 删除路由参数
-  const queryString = new URLSearchParams(queryParams).toString();
-  
-  const url = API_BASE + targetPath + (queryString ? '?' + queryString : '');
+  const url = API_BASE + targetPath;
   
   console.log('🔍 Proxying:', req.method, url);
 
@@ -64,10 +59,8 @@ const handler = async (req, res) => {
       resolve();
     });
 
-    // 🔥 关键修复: 使用 req.body 而不是 req.pipe()
+    // 处理 POST body
     if (req.method === 'POST' || req.method === 'PUT') {
-      // Vercel 默认会解析 body,但我们禁用了 bodyParser
-      // 所以需要手动读取 raw body
       let body = '';
       req.on('data', chunk => {
         body += chunk.toString();
