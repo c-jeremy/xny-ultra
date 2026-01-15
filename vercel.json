@@ -4,7 +4,7 @@
       "src": "^/exam/jyhr(.*)",
       "status": 301,
       "headers": {
-        "Location": "https://bdfz.xnykcxt.com:5002$1"
+        "Location": "https://bdfz.xnykcxt.com:5002/exam/jyhr$1"
       }
     },
     {
