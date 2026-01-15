@@ -1,12 +1,16 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/",
-      "destination": "/web/index.html"
+      "src": "/api/exam/(.*)",
+      "dest": "/api/exam/handler.js"
     },
     {
-      "source": "/((?!api).*)",
-      "destination": "/web/$1"
+      "src": "/",
+      "dest": "/web/index.html"
+    },
+    {
+      "src": "/((?!api).*)",
+      "dest": "/web/$1"
     }
   ]
 }
