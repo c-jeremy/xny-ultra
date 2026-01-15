@@ -1,16 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/exam/:slug*",
-      "destination": "/api/exam/:slug*"
-    },
-    {
       "source": "/",
       "destination": "/web/index.html"
     },
     {
-      "source": "/:path*",
-      "destination": "/web/:path*"
+      "source": "/((?!api).*)",
+      "destination": "/web/$1"
     }
   ]
 }
