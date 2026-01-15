@@ -4,8 +4,10 @@ const API_BASE = 'https://bdfz.xnykcxt.com:5002';
 
 const handler = (req, res) => {
   return new Promise((resolve, reject) => {
-    // CORS headers - mirroring server.js
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // CORS headers
+    // Mirroring server.js but fixing Origin for Credentials support
+    const origin = req.headers.origin || '*';
+    res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Cookie');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -17,10 +19,21 @@ const handler = (req, res) => {
     }
 
     // Construct target URL
-    // req.url will be something like /api/exam/path/to/resource because of the rewrite.
-    // We want to request https://bdfz.xnykcxt.com:5002/exam/path/to/resource
-    // So we replace /api/exam with /exam, or just remove /api.
-    const targetPath = req.url.replace(/^\/api/, '');
+    // Handle both /api/exam/... (rewritten) and /exam/... (if passed directly)
+    let targetPath = req.url;
+
+    // If the request comes via rewrite /exam/* -> /api/exam/*, req.url might be /api/exam/...
+    // If we want to support direct access or different rewrite behaviors, be flexible.
+    if (targetPath.startsWith('/api/exam')) {
+      targetPath = targetPath.replace('/api/exam', '/exam');
+    } else if (targetPath.startsWith('/api')) {
+      targetPath = targetPath.replace('/api', '');
+    }
+
+    // Fallback: if somehow we still don't have /exam prefix (e.g. /login...), prepend it?
+    // But upstream expects /exam/... usually.
+    // Based on server.js: proxyRequest is called for /exam/*.
+
     const url = API_BASE + targetPath;
 
     const options = {
@@ -39,10 +52,12 @@ const handler = (req, res) => {
       }
 
       // server.js only sends these specific headers on response
+      // We already set CORS on the response object above, but to match server.js behavior of sending it with response:
+      // (Note: res.setHeader above sets it on the response to be sent)
+
       res.writeHead(proxyRes.statusCode, {
         'Content-Type': proxyRes.headers['content-type'] || 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Credentials': 'true'
+        // 'Access-Control-Allow-Origin': ... (Already set via setHeader)
       });
 
       proxyRes.pipe(res);
