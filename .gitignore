@@ -1,0 +1,9 @@
+web/node_modules
+web/dist
+web/.env*
+web/.DS_Store
+web/data/
+CLAUDE.md
+.claude/
+data/
+*.png

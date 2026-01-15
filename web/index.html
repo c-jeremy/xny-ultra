@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>高考备考课程追踪</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    h1 { text-align: center; margin-bottom: 30px; font-weight: 600; }
+
+    /* Login */
+    .login-container { max-width: 400px; margin: 100px auto; background: #fff; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .login-title { text-align: center; margin-bottom: 30px; font-size: 24px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-size: 14px; color: #86868b; }
+    .form-group input { width: 100%; padding: 12px 16px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 16px; }
+    .form-group input:focus { outline: none; border-color: #0071e3; }
+    .btn-primary { width: 100%; padding: 14px; background: #0071e3; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    .btn-primary:hover { background: #0077ed; }
+    .btn-primary:disabled { background: #86868b; cursor: not-allowed; }
+    .error-msg { color: #ff3b30; font-size: 14px; margin-top: 10px; text-align: center; }
+
+    /* Header */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .user-info { display: flex; align-items: center; gap: 12px; }
+    .user-name { font-weight: 500; }
+    .btn-logout { padding: 8px 16px; background: #f5f5f7; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+    .btn-logout:hover { background: #e8e8ed; }
+    .btn-add-account { padding: 8px 16px; background: #34c759; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; margin-left: 8px; }
+
+    /* Account switcher */
+    .account-list { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .account-chip { padding: 8px 16px; background: #fff; border: 1px solid #d2d2d7; border-radius: 20px; cursor: pointer; font-size: 14px; }
+    .account-chip.active { background: #0071e3; color: #fff; border-color: #0071e3; }
+    .account-chip .remove { margin-left: 8px; opacity: 0.6; }
+    .account-chip .remove:hover { opacity: 1; }
+
+    /* Tabs & Cards */
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+    .tab { padding: 10px 24px; border: none; background: #fff; border-radius: 20px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    .tab.active { background: #0071e3; color: #fff; }
+    .tab:hover:not(.active) { background: #e8e8ed; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; transition: transform 0.2s; }
+    .card:hover { transform: translateY(-2px); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .card-title { font-weight: 600; font-size: 16px; }
+    .card-badge { background: #f5f5f7; padding: 4px 10px; border-radius: 12px; font-size: 12px; color: #86868b; }
+    .card-badge.new { background: #ff3b30; color: #fff; }
+    .card-path { color: #86868b; font-size: 13px; margin-bottom: 8px; }
+    .card-meta { display: flex; gap: 16px; font-size: 12px; color: #86868b; }
+    .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
+    .filter-btn { padding: 6px 14px; border: 1px solid #d2d2d7; background: #fff; border-radius: 16px; cursor: pointer; font-size: 13px; }
+    .filter-btn.active { border-color: #0071e3; background: #e8f4fd; color: #0071e3; }
+    .search-box { padding: 10px 16px; border: 1px solid #d2d2d7; border-radius: 20px; width: 100%; max-width: 400px; font-size: 14px; }
+    .search-container { display: flex; justify-content: center; margin-bottom: 20px; }
+    .empty { text-align: center; padding: 60px; color: #86868b; }
+    .stats { display: flex; gap: 20px; justify-content: center; margin-bottom: 30px; flex-wrap: wrap; }
+    .stat { background: #fff; padding: 16px 24px; border-radius: 12px; text-align: center; min-width: 100px; }
+    .stat-value { font-size: 28px; font-weight: 600; color: #0071e3; }
+    .stat-label { font-size: 13px; color: #86868b; margin-top: 4px; }
+    .loading { text-align: center; padding: 40px; color: #86868b; }
+
+    /* Modal */
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.show { display: flex; }
+    .modal-content { background: #fff; padding: 30px; border-radius: 16px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-title { font-size: 20px; font-weight: 600; }
+    .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #86868b; }
+    .preview-iframe { width: 100%; height: 70vh; border: none; border-radius: 8px; }
+    .preview-media { width: 100%; max-height: 70vh; border-radius: 8px; }
+    .preview-audio { width: 100%; }
+    .preview-image { max-width: 100%; max-height: 70vh; display: block; margin: 0 auto; border-radius: 8px; }
+    .preview-download { text-align: center; padding: 40px; }
+    .preview-download p { margin-bottom: 20px; color: #86868b; }
+    .course-title { padding: 12px 16px; margin: 8px 0; background: #f5f5f7; border-radius: 8px; font-size: 14px; }
+    .course-title.level-1 { font-size: 16px; font-weight: 600; background: #e8f4fd; color: #0071e3; margin-top: 16px; }
+    .file-card { transition: transform 0.2s; }
+    .file-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .question { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid #e8e8ed; }
+    .question:last-child { border-bottom: none; }
+    .question-num { font-weight: 600; margin-bottom: 12px; color: #0071e3; }
+    .question-stem { margin-bottom: 16px; }
+    .question-stem img { max-width: 100%; height: auto; }
+    .answer-input { width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 16px; }
+    .answer-options { display: flex; gap: 12px; flex-wrap: wrap; }
+    .answer-option { padding: 10px 20px; border: 1px solid #d2d2d7; border-radius: 8px; cursor: pointer; }
+    .answer-option.selected { background: #0071e3; color: #fff; border-color: #0071e3; }
+    .btn-submit { margin-top: 20px; padding: 14px 28px; background: #34c759; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    .btn-submit:hover { background: #30b350; }
+    .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; }
+    .status-badge.submitted { background: #34c759; color: #fff; }
+    .status-badge.pending { background: #ff9500; color: #fff; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    const BASE_URL = ''; // Use proxy server
+
+    // State
+    let accounts = JSON.parse(localStorage.getItem('xnykcxt_accounts') || '[]');
+    let currentAccountIndex = parseInt(localStorage.getItem('xnykcxt_current') || '0');
+    let data = null;
+    let currentTab = 'papers';
+    let currentFilter = 'all';
+    let searchQuery = '';
+
+    // API Client
+    class XnykcxtClient {
+      constructor(token) {
+        this.token = token;
+      }
+
+      async request(path, options = {}) {
+        const res = await fetch(BASE_URL + path, {
+          ...options,
+          headers: { 'Content-Type': 'application/json', ...options.headers },
+          credentials: 'include'
+        });
+        return res.json();
+      }
+
+      async login(studentId, password) {
+        const res = await fetch(BASE_URL + '/exam/login/api/stu/signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumber: studentId, pwd: password }),
+          credentials: 'include'
+        });
+        return res.json();
+      }
+
+      async getTeachers() {
+        return this.request('/exam/api/student/teacher/entity');
+      }
+
+      async getCourseCatalog(teacherId) {
+        return this.request('/exam/api/student/catalog/entity/' + teacherId);
+      }
+
+      async getPaperCatalog(teacherId) {
+        return this.request('/exam/api/student/paper/catalog/entity/' + teacherId);
+      }
+
+      async getPaperContent(paperId) {
+        return this.request('/exam/api/student/paper/entity/' + paperId + '/content');
+      }
+
+      async getStudentPaper(paperId) {
+        return this.request('/exam/api/student/paper/entity/' + paperId);
+      }
+
+      async getPapersByCatalog(catalogId) {
+        return this.request('/exam/api/student/paper/entity/catalog/' + catalogId);
+      }
+
+      async submitAnswer(questionId, answer) {
+        return this.request('/exam/api/student/question/answer', {
+          method: 'POST',
+          body: JSON.stringify({ questionId, stuAnswer: answer })
+        });
+      }
+
+      async getCourseReddot() {
+        return this.request('/exam/api/catalog/reddot');
+      }
+
+      async getPaperReddot() {
+        return this.request('/exam/api/paper/catalog/reddot');
+      }
+
+      async getCoursesByCatalog(catalogId) {
+        return this.request('/exam/api/student/course/entity/catalog/' + catalogId);
+      }
+
+      async getCourseContent(courseId) {
+        return this.request('/exam/api/student/course/entity/' + courseId + '/content');
+      }
+
+      async markCourseAttachmentRead(courseId, attachmentId) {
+        return this.request('/exam/api/student/course/entity/' + courseId + '/attachment/' + attachmentId, { method: 'PUT' });
+      }
+
+      async submitCourseQuestionAnswer(courseId, questionId, answer) {
+        return this.request('/exam/api/student/course/entity/' + courseId + '/question/' + questionId, {
+          method: 'POST',
+          body: JSON.stringify({ courseId, questionId, studentAnswer: answer, resubmitTag: 0, abandonTag: 0 })
+        });
+      }
+
+      async submitCourse(courseId) {
+        return this.request('/exam/api/student/course/entity/' + courseId + '/submit', {
+          method: 'POST',
+          body: JSON.stringify({ courseId })
+        });
+      }
+
+      async getCourseQuestions(courseId) {
+        return this.request('/exam/api/student/course/entity/' + courseId + '/question');
+      }
+    }
+
+    // AES 解密函数
+    const AES_KEY = '348ebfa6d1f9708310cb8a7f88367bc5';
+    function decryptPath(encrypted) {
+      try {
+        const key = CryptoJS.enc.Utf8.parse(AES_KEY);
+        const decrypted = CryptoJS.AES.decrypt(encrypted, key, {
+          mode: CryptoJS.mode.ECB,
+          padding: CryptoJS.pad.Pkcs7
+        });
+        return decrypted.toString(CryptoJS.enc.Utf8) || encrypted;
+      } catch (e) {
+        console.error('解密失败:', e);
+        return encrypted;
+      }
+    }
+
+    const client = new XnykcxtClient();
+
+    // Render functions
+    function render() {
+      const app = document.getElementById('app');
+
+      if (accounts.length === 0 || !accounts[currentAccountIndex]) {
+        app.innerHTML = renderLogin();
+        return;
+      }
+
+      // Set cookie for current account
+      const account = accounts[currentAccountIndex];
+      if (account && account.token) {
+        document.cookie = `token=${account.token}; path=/`;
+      }
+
+      app.innerHTML = `
+        <div class="container">
+          ${renderHeader()}
+          ${renderAccountList()}
+          ${data ? renderDashboard() : '<div class="loading">加载中...</div>'}
+        </div>
+        ${renderModal()}
+      `;
+
+      if (!data) loadData();
+    }
+
+    function renderLogin(isAddAccount = false) {
+      return `
+        <div class="login-container">
+          <h2 class="login-title">${isAddAccount ? '添加账号' : '登录'}</h2>
+          <form onsubmit="handleLogin(event, ${isAddAccount})">
+            <div class="form-group">
+              <label>学号</label>
+              <input type="text" id="studentId" required placeholder="请输入学号">
+            </div>
+            <div class="form-group">
+              <label>密码</label>
+              <input type="password" id="password" required placeholder="请输入密码">
+            </div>
+            <button type="submit" class="btn-primary" id="loginBtn">登录</button>
+            <div class="error-msg" id="errorMsg"></div>
+          </form>
+          ${isAddAccount ? '<button onclick="render()" style="margin-top:16px;width:100%;padding:12px;background:#f5f5f7;border:none;border-radius:8px;cursor:pointer;">取消</button>' : ''}
+        </div>
+      `;
+    }
+
+    function renderHeader() {
+      const account = accounts[currentAccountIndex];
+      return `
+        <div class="header">
+          <h1>高考备考课程追踪</h1>
+          <div class="user-info">
+            <span class="user-name">${account.name || account.studentId}</span>
+            <button class="btn-logout" onclick="handleLogout()">退出</button>
+            <button class="btn-add-account" onclick="showAddAccount()">+ 添加账号</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAccountList() {
+      if (accounts.length <= 1) return '';
+      return `
+        <div class="account-list">
+          ${accounts.map((acc, i) => `
+            <div class="account-chip ${i === currentAccountIndex ? 'active' : ''}" onclick="switchAccount(${i})">
+              ${acc.name || acc.studentId}
+              <span class="remove" onclick="event.stopPropagation();removeAccount(${i})">×</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderDashboard() {
+      const newCourses = data.reddot?.courses?.catalogIds?.length || 0;
+      const newPapers = data.reddot?.papers?.catalogIds?.length || 0;
+
+      return `
+        <div class="stats">
+          <div class="stat"><div class="stat-value">${data.teachers?.length || 0}</div><div class="stat-label">老师</div></div>
+          <div class="stat"><div class="stat-value">${data.courses?.length || 0}</div><div class="stat-label">课程</div></div>
+          <div class="stat"><div class="stat-value">${data.papers?.length || 0}</div><div class="stat-label">考试/作业</div></div>
+          <div class="stat"><div class="stat-value">${newCourses + newPapers}</div><div class="stat-label">新内容</div></div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab ${currentTab === 'papers' ? 'active' : ''}" onclick="setTab('papers')">考试/作业</button>
+          <button class="tab ${currentTab === 'courses' ? 'active' : ''}" onclick="setTab('courses')">课程</button>
+        </div>
+
+        <div class="filter-bar">
+          <button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">全部</button>
+          ${(data.teachers || []).map(t => `
+            <button class="filter-btn ${currentFilter === t.subject ? 'active' : ''}" onclick="setFilter('${t.subject}')">${t.subject}</button>
+          `).join('')}
+        </div>
+
+        <div class="search-container">
+          <input type="text" class="search-box" placeholder="搜索..." value="${searchQuery}" oninput="setSearch(this.value)">
+        </div>
+
+        <div class="cards">${renderCards()}</div>
+      `;
+    }
+
+    function renderCards() {
+      if (!data) return '<div class="empty">暂无数据</div>';
+
+      const items = currentTab === 'papers' ? data.papers : data.courses;
+      const reddotIds = currentTab === 'papers'
+        ? new Set(data.reddot?.papers?.catalogIds || [])
+        : new Set(data.reddot?.courses?.catalogIds || []);
+
+      let filtered = items || [];
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(i => i.subject === currentFilter);
+      }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        filtered = filtered.filter(i =>
+          i.name.toLowerCase().includes(q) ||
+          i.path.toLowerCase().includes(q) ||
+          i.teacherName.toLowerCase().includes(q)
+        );
+      }
+
+      filtered.sort((a, b) => new Date(b.updateTime) - new Date(a.updateTime));
+
+      if (filtered.length === 0) {
+        return '<div class="empty">暂无数据</div>';
+      }
+
+      return filtered.slice(0, 50).map(item => {
+        const isNew = reddotIds.has(item.id);
+        const onclick = currentTab === 'papers' ? `onclick="openCatalog(${item.id})"` : `onclick="openCourseCatalog(${item.id})"`;
+        return `
+          <div class="card" ${onclick}>
+            <div class="card-header">
+              <div class="card-title">${item.name}</div>
+              <div class="card-badge ${isNew ? 'new' : ''}">${isNew ? '新' : item.subject}</div>
+            </div>
+            <div class="card-path">${item.path}</div>
+            <div class="card-meta">
+              <span>👨‍🏫 ${item.teacherName}</span>
+              <span>📅 ${item.updateTime?.split(' ')[0] || ''}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderModal() {
+      return `
+        <div class="modal" id="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 class="modal-title" id="modalTitle">试卷详情</h3>
+              <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div id="modalBody"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Event handlers
+    async function handleLogin(e, isAddAccount) {
+      e.preventDefault();
+      const studentId = document.getElementById('studentId').value;
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('loginBtn');
+      const errorMsg = document.getElementById('errorMsg');
+
+      btn.disabled = true;
+      btn.textContent = '登录中...';
+      errorMsg.textContent = '';
+
+      try {
+        const res = await client.login(studentId, password);
+        if (res.code === 0) {
+          // 获取 cookie 中的 token
+          const token = document.cookie.match(/token=([^;]+)/)?.[1];
+          const account = {
+            studentId,
+            name: res.extra?.userName || studentId,
+            token: token
+          };
+
+          if (isAddAccount) {
+            accounts.push(account);
+            currentAccountIndex = accounts.length - 1;
+          } else {
+            accounts = [account];
+            currentAccountIndex = 0;
+          }
+
+          localStorage.setItem('xnykcxt_accounts', JSON.stringify(accounts));
+          localStorage.setItem('xnykcxt_current', currentAccountIndex.toString());
+          data = null;
+          render();
+        } else {
+          errorMsg.textContent = res.message || '登录失败';
+        }
+      } catch (err) {
+        errorMsg.textContent = '网络错误：' + err.message;
+      }
+
+      btn.disabled = false;
+      btn.textContent = '登录';
+    }
+
+    function handleLogout() {
+      accounts.splice(currentAccountIndex, 1);
+      currentAccountIndex = Math.max(0, currentAccountIndex - 1);
+      localStorage.setItem('xnykcxt_accounts', JSON.stringify(accounts));
+      localStorage.setItem('xnykcxt_current', currentAccountIndex.toString());
+      data = null;
+      render();
+    }
+
+    function showAddAccount() {
+      document.getElementById('app').innerHTML = renderLogin(true);
+    }
+
+    function switchAccount(index) {
+      currentAccountIndex = index;
+      localStorage.setItem('xnykcxt_current', index.toString());
+      // Set cookie for the selected account
+      const account = accounts[index];
+      if (account && account.token) {
+        document.cookie = `token=${account.token}; path=/`;
+      }
+      data = null;
+      render();
+    }
+
+    function removeAccount(index) {
+      if (accounts.length <= 1) {
+        handleLogout();
+        return;
+      }
+      accounts.splice(index, 1);
+      if (currentAccountIndex >= accounts.length) {
+        currentAccountIndex = accounts.length - 1;
+      }
+      localStorage.setItem('xnykcxt_accounts', JSON.stringify(accounts));
+      localStorage.setItem('xnykcxt_current', currentAccountIndex.toString());
+      data = null;
+      render();
+    }
+
+    function setTab(tab) {
+      currentTab = tab;
+      render();
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      render();
+    }
+
+    function setSearch(query) {
+      searchQuery = query;
+      render();
+    }
+
+    async function openCatalog(catalogId) {
+      const modal = document.getElementById('modal');
+      const modalBody = document.getElementById('modalBody');
+      const modalTitle = document.getElementById('modalTitle');
+
+      modal.classList.add('show');
+      modalBody.innerHTML = '<div class="loading">加载中...</div>';
+
+      try {
+        // 先获取目录下的试卷列表
+        const papersRes = await client.getPapersByCatalog(catalogId);
+        const papers = papersRes.extra || [];
+
+        if (papers.length === 0) {
+          modalTitle.textContent = '暂无试卷';
+          modalBody.innerHTML = '<div class="empty">该目录下暂无试卷</div>';
+          return;
+        }
+
+        if (papers.length === 1) {
+          // 只有一个试卷，直接打开
+          closeModal();
+          openPaper(papers[0].id);
+          return;
+        }
+
+        // 多个试卷，显示列表让用户选择
+        modalTitle.textContent = `选择试卷 (${papers.length}个)`;
+        modalBody.innerHTML = `
+          <div class="paper-list">
+            ${papers.map(p => `
+              <div class="card" onclick="closeModal(); openPaper(${p.id})" style="margin-bottom: 12px;">
+                <div class="card-title">${p.paperName}</div>
+                <div class="card-meta">
+                  <span>📅 ${p.paperPublishTime?.split(' ')[0] || ''}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch (err) {
+        console.error('Load catalog failed:', err);
+        modalBody.innerHTML = '<div class="error-msg">加载失败</div>';
+      }
+    }
+
+    async function openPaper(paperId) {
+      const modal = document.getElementById('modal');
+      const modalBody = document.getElementById('modalBody');
+      const modalTitle = document.getElementById('modalTitle');
+
+      modal.classList.add('show');
+      modalBody.innerHTML = '<div class="loading">加载中...</div>';
+
+      try {
+        const [contentRes, statusRes] = await Promise.all([
+          client.getPaperContent(paperId),
+          client.getStudentPaper(paperId)
+        ]);
+
+        const questions = (contentRes.extra || []).filter(c => c.contentType === 2).map(c => c.content);
+        const status = statusRes.extra || {};
+
+        modalTitle.textContent = `试卷 (${questions.length}题)`;
+
+        if (questions.length === 0) {
+          modalBody.innerHTML = '<div class="empty">暂无题目</div>';
+          return;
+        }
+
+        modalBody.innerHTML = `
+          <div class="paper-status">
+            <span class="status-badge ${status.mappingStatus === 1 ? 'submitted' : 'pending'}">
+              ${status.mappingStatus === 1 ? '已提交' : '未提交'}
+            </span>
+          </div>
+          ${questions.map((q, i) => `
+            <div class="question" data-id="${q.id}">
+              <div class="question-num">第 ${q.questionNumber || (i+1)} 题 (${q.questionScore}分)</div>
+              <div class="question-stem">${q.questionStem || ''}</div>
+              ${q.answerCard ? `
+                <div class="answer-options">
+                  ${q.answerCard.split(',').map(opt => `
+                    <div class="answer-option ${q.stuAnswer === opt ? 'selected' : ''}"
+                         onclick="selectAnswer(${q.id}, '${opt}', this)">${opt}</div>
+                  `).join('')}
+                </div>
+              ` : `
+                <input type="text" class="answer-input" placeholder="输入答案"
+                       value="${q.stuAnswer || ''}"
+                       onchange="submitTextAnswer(${q.id}, this.value)">
+              `}
+            </div>
+          `).join('')}
+          <button class="btn-submit" onclick="submitAllAnswers(${paperId})">提交全部答案</button>
+        `;
+      } catch (err) {
+        modalBody.innerHTML = '<div class="error-msg">加载失败</div>';
+      }
+    }
+
+    async function openCourseCatalog(catalogId) {
+      const modal = document.getElementById('modal');
+      const modalBody = document.getElementById('modalBody');
+      const modalTitle = document.getElementById('modalTitle');
+
+      modal.classList.add('show');
+      modalBody.innerHTML = '<div class="loading">加载中...</div>';
+
+      try {
+        const coursesRes = await client.getCoursesByCatalog(catalogId);
+        const courses = coursesRes.extra || [];
+
+        if (courses.length === 0) {
+          modalTitle.textContent = '暂无课程';
+          modalBody.innerHTML = '<div class="empty">该目录下暂无课程内容</div>';
+          return;
+        }
+
+        if (courses.length === 1) {
+          openCourse(courses[0].id);
+          return;
+        }
+
+        modalTitle.textContent = `选择课程 (${courses.length}个)`;
+        modalBody.innerHTML = `
+          <div class="course-list">
+            ${courses.map(c => `
+              <div class="card" onclick="openCourse(${c.id})" style="margin-bottom: 12px;">
+                <div class="card-title">${c.courseName}</div>
+                <div class="card-meta">
+                  <span>📅 ${c.coursePublishTime?.split(' ')[0] || ''}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch (err) {
+        console.error('Load course catalog failed:', err);
+        modalBody.innerHTML = '<div class="error-msg">加载失败</div>';
+      }
+    }
+
+    async function openCourse(courseId) {
+      const modal = document.getElementById('modal');
+      const modalBody = document.getElementById('modalBody');
+      const modalTitle = document.getElementById('modalTitle');
+
+      modal.classList.add('show');
+      modalBody.innerHTML = '<div class="loading">加载中...</div>';
+
+      try {
+        const contentRes = await client.getCourseContent(courseId);
+        const contents = contentRes.extra || [];
+
+        if (contents.length === 0) {
+          modalTitle.textContent = '暂无内容';
+          modalBody.innerHTML = '<div class="empty">该课程暂无内容</div>';
+          return;
+        }
+
+        modalTitle.textContent = `课程内容 (${contents.length}项)`;
+        modalBody.innerHTML = `
+          <div class="course-content-list">
+            ${contents.map(item => {
+              const c = item.content || {};
+              if (!c.id) return '';
+
+              // contentType: 0 = 文本/标题, 1 = 附件, 2 = 题目
+              if (item.contentType === 0) {
+                const text = c.textContent || '';
+                const isTitle = c.titleLevel === 1;
+                return `<div class="course-title ${isTitle ? 'level-1' : ''}">${text}</div>`;
+              }
+
+              if (item.contentType === 2) {
+                // 题目
+                return `
+                  <div class="question course-question" data-id="${c.id}" data-course="${courseId}">
+                    <div class="question-num">第 ${c.questionNumber || ''} 题 ${c.questionScore ? `(${c.questionScore}分)` : ''}</div>
+                    <div class="question-stem">${c.questionStem || ''}</div>
+                    ${c.answerCard ? `
+                      <div class="answer-options">
+                        ${c.answerCard.split(',').map(opt => `
+                          <div class="answer-option ${c.stuAnswer === opt ? 'selected' : ''}"
+                               onclick="selectCourseAnswer(${c.id}, ${courseId}, '${opt}', this)">${opt}</div>
+                        `).join('')}
+                      </div>
+                    ` : `
+                      <input type="text" class="answer-input" placeholder="输入答案"
+                             value="${c.stuAnswer || ''}"
+                             onchange="submitCourseTextAnswer(${c.id}, ${courseId}, this.value)">
+                    `}
+                  </div>
+                `;
+              }
+
+              // contentType === 1: 附件
+              const fileType = c.attachmentExtraName || '';
+              const icon = getFileIcon(fileType);
+              const linkAddr = (c.attachmentLinkAddress || '').replace(/'/g, "\\'");
+              const name = (c.attachmentName || '未命名').replace(/'/g, "\\'");
+              return `
+                <div class="card file-card" onclick="previewAttachment(${item.content.id}, '${linkAddr}', '${fileType}', '${name}')" style="margin-bottom: 12px; cursor: pointer;">
+                  <div class="card-header">
+                    <div class="card-title">${icon} ${c.attachmentName || '未命名'}</div>
+                    <div class="card-badge">${fileType || '文件'}</div>
+                  </div>
+                  <div class="card-meta">
+                    <span>📄 ${formatFileSize(c.attachmentSize)}</span>
+                    ${c.attachmentPageCounts ? `<span>📑 ${c.attachmentPageCounts}页</span>` : ''}
+                    ${c.attachmentDuration ? `<span>⏱️ ${c.attachmentDuration}</span>` : ''}
+                    <span>📅 ${(c.createTime || '').split(' ')[0]}</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          ${contents.some(item => item.contentType === 2) ? `<button class="btn-submit" onclick="submitCourseAnswers(${courseId})">提交答案</button>` : ''}
+        `;
+      } catch (err) {
+        console.error('Load course content failed:', err);
+        modalBody.innerHTML = '<div class="error-msg">加载失败</div>';
+      }
+    }
+
+    function getFileIcon(ext) {
+      const icons = {
+        '.pdf': '📕', '.pptx': '📊', '.ppt': '📊', '.docx': '📄', '.doc': '📄',
+        '.xlsx': '📈', '.xls': '📈', '.mp4': '🎬', '.mp3': '🎵', '.jpg': '🖼️',
+        '.png': '🖼️', '.gif': '🖼️'
+      };
+      return icons[ext.toLowerCase()] || '📎';
+    }
+
+    function formatFileSize(bytes) {
+      if (!bytes) return '';
+      const size = parseInt(bytes);
+      if (size < 1024) return size + 'B';
+      if (size < 1024 * 1024) return (size / 1024).toFixed(1) + 'KB';
+      return (size / 1024 / 1024).toFixed(1) + 'MB';
+    }
+
+    async function previewAttachment(attachmentId, linkAddress, fileType, fileName) {
+      // 解密路径
+      const decryptedPath = decryptPath(linkAddress);
+      const fullPath = '/exam' + decryptedPath;
+
+      const modal = document.getElementById('modal');
+      const modalBody = document.getElementById('modalBody');
+      const modalTitle = document.getElementById('modalTitle');
+
+      modalTitle.textContent = fileName;
+      modal.classList.add('show');
+
+      // 根据文件类型选择预览方式
+      const ext = fileType.toLowerCase();
+      if (['.pdf', '.pptx', '.ppt', '.docx', '.doc'].includes(ext)) {
+        // 使用远程服务器的PDF viewer，构造完整URL
+        const pdfUrl = 'https://bdfz.xnykcxt.com:5002' + fullPath;
+        const previewUrl = 'https://bdfz.xnykcxt.com:5002/exam/pdf/web/viewer.html?file=' + encodeURIComponent(pdfUrl);
+        modalBody.innerHTML = `<iframe src="${previewUrl}" class="preview-iframe"></iframe>`;
+      } else if (['.mp4'].includes(ext)) {
+        modalBody.innerHTML = `<video src="${BASE_URL + fullPath}" controls class="preview-media"></video>`;
+      } else if (['.mp3'].includes(ext)) {
+        modalBody.innerHTML = `<audio src="${BASE_URL + fullPath}" controls class="preview-audio"></audio>`;
+      } else if (['.jpg', '.png', '.gif', '.jpeg'].includes(ext)) {
+        modalBody.innerHTML = `<img src="${BASE_URL + fullPath}" class="preview-image">`;
+      } else {
+        modalBody.innerHTML = `<div class="preview-download">
+          <p>该文件类型不支持预览</p>
+          <a href="${BASE_URL + fullPath}" download="${fileName}${fileType}" class="btn-primary">下载文件</a>
+        </div>`;
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('show');
+    }
+
+    async function selectAnswer(questionId, answer, el) {
+      el.parentElement.querySelectorAll('.answer-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+
+      try {
+        await client.submitAnswer(questionId, answer);
+      } catch (err) {
+        console.error('Submit failed:', err);
+      }
+    }
+
+    async function submitTextAnswer(questionId, answer) {
+      try {
+        await client.submitAnswer(questionId, answer);
+      } catch (err) {
+        console.error('Submit failed:', err);
+      }
+    }
+
+    async function selectCourseAnswer(questionId, courseId, answer, el) {
+      el.parentElement.querySelectorAll('.answer-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      try {
+        await client.submitCourseQuestionAnswer(courseId, questionId, answer);
+      } catch (err) {
+        console.error('Submit course answer failed:', err);
+      }
+    }
+
+    async function submitCourseTextAnswer(questionId, courseId, answer) {
+      try {
+        await client.submitCourseQuestionAnswer(courseId, questionId, answer);
+      } catch (err) {
+        console.error('Submit course answer failed:', err);
+      }
+    }
+
+    async function submitCourseAnswers(courseId) {
+      try {
+        await client.submitCourse(courseId);
+        alert('提交成功！');
+      } catch (err) {
+        console.error('Submit course failed:', err);
+        alert('提交失败：' + err.message);
+      }
+    }
+
+    async function submitAllAnswers(paperId) {
+      alert('答案已保存！');
+      closeModal();
+    }
+
+    // Data loading
+    async function loadData() {
+      try {
+        const [teachersRes, courseReddot, paperReddot] = await Promise.all([
+          client.getTeachers(),
+          client.getCourseReddot(),
+          client.getPaperReddot()
+        ]);
+
+        const teachers = teachersRes.extra || [];
+        data = {
+          teachers: teachers.map(t => ({
+            id: t.teacherUserId,
+            name: t.userName,
+            subject: t.subjectName,
+            school: t.schoolName
+          })),
+          courses: [],
+          papers: [],
+          reddot: {
+            courses: courseReddot.extra || {},
+            papers: paperReddot.extra || {}
+          }
+        };
+
+        // Load catalogs for each teacher
+        for (const t of teachers) {
+          const [coursesRes, papersRes] = await Promise.all([
+            client.getCourseCatalog(t.teacherUserId),
+            client.getPaperCatalog(t.teacherUserId)
+          ]);
+
+          flattenCatalog(coursesRes.extra || [], data.courses, t, 'course');
+          flattenCatalog(papersRes.extra || [], data.papers, t, 'paper');
+        }
+
+        render();
+      } catch (err) {
+        console.error('Load failed:', err);
+        data = { teachers: [], courses: [], papers: [], reddot: {} };
+        render();
+      }
+    }
+
+    function flattenCatalog(items, result, teacher, type) {
+      for (const item of items) {
+        result.push({
+          id: item.id,
+          paperId: item.paperId || item.id,  // 优先使用 paperId，如果不存在则回退到 id
+          name: item.catalogName,
+          path: item.catalogNamePath,
+          createTime: item.createTime,
+          updateTime: item.updateTime,
+          teacherId: teacher.teacherUserId,
+          teacherName: teacher.userName,
+          subject: teacher.subjectName
+        });
+        if (item.childList) {
+          flattenCatalog(item.childList, result, teacher, type);
+        }
+      }
+    }
+
+    // Click outside modal to close
+    document.addEventListener('click', e => {
+      if (e.target.classList.contains('modal')) {
+        closeModal();
+      }
+    });
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
