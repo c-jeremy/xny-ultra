@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/exam/:path*",
+      "destination": "/api/exam/:path*"
+    },
+    {
+      "source": "/",
+      "destination": "/web/index.html"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/web/:path*"
+    }
+  ]
+}
